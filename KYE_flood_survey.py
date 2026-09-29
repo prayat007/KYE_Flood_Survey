@@ -60,7 +60,7 @@ def fetch_data():
         
         # ปรับแก้หัวตารางให้ตรงกันอัตโนมัติ
         if len(values) == 0 or values[0] != COLUMNS:
-            worksheet.update('A1:I1', [COLUMNS])
+            worksheet.update('A1:J1', [COLUMNS])
             values = worksheet.get_all_values()
 
         if len(values) > 1:
