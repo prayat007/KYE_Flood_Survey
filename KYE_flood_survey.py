@@ -176,22 +176,25 @@ st.markdown("### 📋 สรุปผลการสำรวจแยกตา�
 df_data = fetch_data()
 
 if not df_data.empty:
-    # แปลงคอลัมน์ที่เป็นตัวเลขเพื่อนำมาคำนวณรวม (Total)
-    num_cols = [c for c in COLUMNS if c != "Dep't"]
+    # 1. ระบุคอลัมน์ตัวเลขให้ชัดเจน (แยกออกจาก ฝ่าย, แผนก, กลุ่ม)
+    num_cols = [c for c in COLUMNS if c not in TEXT_COLUMNS]
+    
+    # 2. แปลงเฉพาะคอลัมน์ตัวเลข ให้เป็นตัวเลข (ป้องกันข้อความโดนแปลงเป็น 0)
     for col in num_cols:
         df_data[col] = pd.to_numeric(df_data[col], errors='coerce').fillna(0).astype(int)
 
-    # คำนวณแถวรวม (Total Row)
-    total_row = {"Dep't": "รวมทั้งหมด (Total)"}
+    # 3. สร้างแถวสรุปยอดรวม (Total Row)
+    total_row = {"ฝ่าย": "รวมทั้งหมด (Total)", "แผนก": "-", "กลุ่ม": "-"}
     for col in num_cols:
         total_row[col] = df_data[col].sum()
     
     df_total = pd.DataFrame([total_row])
     
-    # แสดงตารางแบบสรุป
+    # แสดงตารางแยกตามแผนก (ข้อมูล ฝ่าย/แผนก/กลุ่ม จะขึ้นข้อความถูกต้อง)
     st.dataframe(df_data, use_container_width=True, hide_index=True)
     
     st.markdown("#### 🧮 ยอดรวมภาพรวมองค์กร")
+    # แสดงตารางยอดรวม
     st.dataframe(df_total, use_container_width=True, hide_index=True)
 else:
     st.info("ℹ️ ยังไม่มีข้อมูลในระบบ หรือยังไม่ได้ตั้งค่า `SHEET_ID` ในไฟล์")
