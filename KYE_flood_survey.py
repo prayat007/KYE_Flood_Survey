@@ -179,25 +179,38 @@ st.markdown("### 📋 สรุปผลการสำรวจแยกตา�
 df_data = fetch_data()
 
 if not df_data.empty:
-    # 1. ระบุคอลัมน์ตัวเลขให้ชัดเจน (แยกออกจาก ฝ่าย, แผนก, กลุ่ม)
     num_cols = [c for c in COLUMNS if c not in TEXT_COLUMNS]
     
-    # 2. แปลงเฉพาะคอลัมน์ตัวเลข ให้เป็นตัวเลข (ป้องกันข้อความโดนแปลงเป็น 0)
+    # แปลงคอลัมน์ตัวเลขให้เป็น int
     for col in num_cols:
         df_data[col] = pd.to_numeric(df_data[col], errors='coerce').fillna(0).astype(int)
 
-    # 3. สร้างแถวสรุปยอดรวม (Total Row)
+    # แสดงตารางรายการทั้งหมดแยกตามแผนก
+    st.dataframe(df_data, use_container_width=True, hide_index=True)
+    
+    st.markdown("---")
+    st.markdown("### 🧮 ยอดรวมภาพรวมองค์กร (แยกตามฝ่าย)")
+    
+    # 1. สรุปรวมยอดแยกตามแต่ละ "ฝ่าย"
+    df_by_faction = df_data.groupby("ฝ่าย", as_index=False)[num_cols].sum()
+    df_by_faction["แผนก"] = "รวมตามฝ่าย"
+    df_by_faction["กลุ่ม"] = "-"
+    
+    # Reorder คอลัมน์ให้อยู่ในลำดับเดียวกับ COLUMNS
+    df_by_faction = df_by_faction[COLUMNS]
+
+    # 2. สร้างบรรทัดสรุปรวมทั้งหมดองค์กร (Grand Total)
     total_row = {"ฝ่าย": "รวมทั้งหมด (Total)", "แผนก": "-", "กลุ่ม": "-"}
     for col in num_cols:
         total_row[col] = df_data[col].sum()
     
-    df_total = pd.DataFrame([total_row])
+    df_grand_total = pd.DataFrame([total_row])
     
-    # แสดงตารางแยกตามแผนก (ข้อมูล ฝ่าย/แผนก/กลุ่ม จะขึ้นข้อความถูกต้อง)
-    st.dataframe(df_data, use_container_width=True, hide_index=True)
+    # 3. รวมตารางสรุปรายฝ่าย และ สรุปรวมทั้งหมด เข้าด้วยกัน
+    df_total_summary = pd.concat([df_by_faction, df_grand_total], ignore_index=True)
     
-    st.markdown("#### 🧮 ยอดรวมภาพรวมองค์กร")
-    # แสดงตารางยอดรวม
-    st.dataframe(df_total, use_container_width=True, hide_index=True)
+    # แสดงตารางยอดรวมภาพรวมองค์กร
+    st.dataframe(df_total_summary, use_container_width=True, hide_index=True)
+
 else:
     st.info("ℹ️ ยังไม่มีข้อมูลในระบบ หรือยังไม่ได้ตั้งค่า `SHEET_ID` ในไฟล์")
