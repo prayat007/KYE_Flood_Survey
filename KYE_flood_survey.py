@@ -80,7 +80,7 @@ def fetch_data():
 st.set_page_config(page_title="แบบสำรวจผลกระทบน้ำท่วม", page_icon="🌊", layout="wide")
 
 st.title("🌊 แบบสำรวจผลกระทบน้ำท่วม")
-st.subheader("⏱️ (ส่งภายใน 14.00 น. วันที่ 28.09.2026)")
+st.subheader("⏱️ (ส่งภายใน 12.00 น. วันที่ 30.09.2026)")
 
 st.divider()
 
