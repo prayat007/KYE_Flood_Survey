@@ -85,13 +85,19 @@ st.subheader("⏱️ (ส่งภายใน 14.00 น. วันที่ 28.
 st.divider()
 
 # ---------------------------------------------------------
-# 💡 POP-UP MODAL บันทึกข้อมูลแผนก
+# 💡 POP-UP MODAL บันทึกข้อมูล
 # ---------------------------------------------------------
 @st.dialog("➕ บันทึก / แก้ไขข้อมูลผลกระทบน้ำท่วม")
 def show_survey_modal():
-    dept = st.text_input("แผนก (Dep't) *", placeholder="เช่น Production, HR, IT")
-    manpower = st.number_input("จำนวนคนทั้งหมด Manpower (KYE,SUB,CAM)", min_value=0, value=0, step=1)
-    
+    # 1. ปรับช่องกรอกข้อมูลส่วนบนให้มี ฝ่าย, แผนก, กลุ่ม
+    col_d1, col_d2, col_d3 = st.columns(3)
+    with col_d1:
+        faction = st.text_input("ฝ่าย *", placeholder="เช่น ฝ่ายผลิต")
+    with col_d2:
+        dept = st.text_input("แผนก *", placeholder="เช่น HR, IT")
+    with col_d3:
+        group_name = st.text_input("กลุ่ม", placeholder="เช่น กลุ่มงาน A")
+
     st.markdown("---")
     st.markdown("### 1️⃣ สรุปการได้รับผลกระทบ")
     no_impact = st.number_input("ไม่ได้รับผลกระทบ (คน)", min_value=0, value=0, step=1)
@@ -117,8 +123,8 @@ def show_survey_modal():
     col_save, col_close = st.columns([1, 1])
     with col_save:
         if st.button("💾 บันทึกข้อมูลลง Google Sheets", type="primary", use_container_width=True):
-            if not dept.strip():
-                st.warning("⚠️ กรุณากรอกชื่อแผนก (Dep't)")
+            if not faction.strip() or not dept.strip():
+                st.warning("⚠️ กรุณากรอก 'ฝ่าย' และ 'แผนก'")
             else:
                 try:
                     gc = get_gspread_client()
@@ -126,9 +132,11 @@ def show_survey_modal():
                         sh = gc.open_by_key(SHEET_ID)
                         worksheet = sh.get_worksheet(0)
                         
+                        # 2. ปรับ new_row ให้มีครบทั้ง 10 คอลัมน์ตรงกับตัวแปร COLUMNS
                         new_row = [
+                            faction.strip(),
                             dept.strip(),
-                            str(manpower),
+                            group_name.strip(),
                             str(no_impact),
                             str(injured),
                             str(house_impact),
@@ -139,7 +147,7 @@ def show_survey_modal():
                         ]
                         
                         worksheet.append_row(new_row)
-                        st.toast(f"✅ บันทึกข้อมูลแผนก {dept} เรียบร้อยแล้ว!", icon="🎉")
+                        st.toast(f"✅ บันทึกข้อมูลเรียบร้อยแล้ว!", icon="🎉")
                         st.cache_resource.clear()
                         st.rerun()
                 except Exception as e:
