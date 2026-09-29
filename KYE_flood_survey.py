@@ -19,11 +19,12 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ---------------------------------------------------------
 SHEET_ID = "1-9SAunNI81-u0I1zqULEa6JbFlWQjmJQ-HoAN4HkLUc"
 
-# รายชื่อหัวคอลัมน์ทั้ง 10 คอลัมน์
+# รายชื่อหัวคอลัมน์ทั้ง 11 คอลัมน์ (แทรก "ชื่อ-นามสกุล" หลัง "กลุ่ม")
 COLUMNS = [
     "ฝ่าย",
     "แผนก",
     "กลุ่ม",
+    "ชื่อ-นามสกุล",
     "ไม่ได้รับผลกระทบ",
     "ได้รับผลกระทบ: บาดเจ็บ",
     "ได้รับผลกระทบ: บ้าน",
@@ -33,9 +34,8 @@ COLUMNS = [
     "มาทำงานไม่ได้: น้ำท่วมถนน พื้นที่โดยรอบมาไม่ได้"
 ]
 
-# ⚠️ เพิ่มบรรทัดนี้เข้าไปครับ (ระบุคอลัมน์ที่เป็นข้อความเพื่อไม่ให้นำมารวมเลข)
-TEXT_COLUMNS = ["ฝ่าย", "แผนก", "กลุ่ม"]
-
+# ระบุคอลัมน์ที่เป็นข้อความเพื่อไม่ให้นำมารวมยอดตัวเลข
+TEXT_COLUMNS = ["ฝ่าย", "แผนก", "กลุ่ม", "ชื่อ-นามสกุล"]
 
 # ---------------------------------------------------------
 # 📊 Google Sheets Connection
@@ -61,9 +61,9 @@ def fetch_data():
         worksheet = sh.get_worksheet(0)
         values = worksheet.get_all_values()
         
-        # ปรับแก้หัวตารางให้ตรงกันอัตโนมัติ
+        # ปรับแก้หัวตารางให้ตรงกันอัตโนมัติ (A1 ถึง K1 รวม 11 คอลัมน์)
         if len(values) == 0 or values[0] != COLUMNS:
-            worksheet.update('A1:J1', [COLUMNS])
+            worksheet.update(range_name='A1:K1', values=[COLUMNS])
             values = worksheet.get_all_values()
 
         if len(values) > 1:
@@ -92,14 +92,14 @@ st.divider()
 # ---------------------------------------------------------
 @st.dialog("➕ บันทึก / แก้ไขข้อมูลผลกระทบน้ำท่วม")
 def show_survey_modal():
-    # 1. ปรับช่องกรอกข้อมูลส่วนบนให้มี ฝ่าย, แผนก, กลุ่ม
-    col_d1, col_d2, col_d3 = st.columns(3)
+    # 1. ปรับช่องกรอกข้อมูลส่วนบนให้มี ฝ่าย, แผนก, กลุ่ม, ชื่อ-นามสกุล
+    col_d1, col_d2 = st.columns(2)
     with col_d1:
         faction = st.text_input("ฝ่าย *", placeholder="เช่น ฝ่ายผลิต")
+        group_name = st.text_input("กลุ่ม", placeholder="เช่น กลุ่มงาน A")
     with col_d2:
         dept = st.text_input("แผนก *", placeholder="เช่น HR, IT")
-    with col_d3:
-        group_name = st.text_input("กลุ่ม", placeholder="เช่น กลุ่มงาน A")
+        full_name = st.text_input("ชื่อ-นามสกุล", placeholder="เช่น นายสมชาย ใจดี")
 
     st.markdown("---")
     st.markdown("### 1️⃣ สรุปการได้รับผลกระทบ")
@@ -135,11 +135,12 @@ def show_survey_modal():
                         sh = gc.open_by_key(SHEET_ID)
                         worksheet = sh.get_worksheet(0)
                         
-                        # 2. ปรับ new_row ให้มีครบทั้ง 10 คอลัมน์ตรงกับตัวแปร COLUMNS
+                        # 2. ปรับ new_row ให้มีครบทั้ง 11 คอลัมน์ตรงกับตัวแปร COLUMNS
                         new_row = [
                             faction.strip(),
                             dept.strip(),
                             group_name.strip(),
+                            full_name.strip(),
                             str(no_impact),
                             str(injured),
                             str(house_impact),
@@ -195,12 +196,13 @@ if not df_data.empty:
     df_by_faction = df_data.groupby("ฝ่าย", as_index=False)[num_cols].sum()
     df_by_faction["แผนก"] = "รวมตามฝ่าย"
     df_by_faction["กลุ่ม"] = "-"
+    df_by_faction["ชื่อ-นามสกุล"] = "-"
     
     # Reorder คอลัมน์ให้อยู่ในลำดับเดียวกับ COLUMNS
     df_by_faction = df_by_faction[COLUMNS]
 
     # 2. สร้างบรรทัดสรุปรวมทั้งหมดองค์กร (Grand Total)
-    total_row = {"ฝ่าย": "รวมทั้งหมด (Total)", "แผนก": "-", "กลุ่ม": "-"}
+    total_row = {"ฝ่าย": "รวมทั้งหมด (Total)", "แผนก": "-", "กลุ่ม": "-", "ชื่อ-นามสกุล": "-"}
     for col in num_cols:
         total_row[col] = df_data[col].sum()
     
