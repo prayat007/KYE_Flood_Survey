@@ -19,7 +19,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ---------------------------------------------------------
 SHEET_ID = "1-9SAunNI81-u0I1zqULEa6JbFlWQjmJQ-HoAN4HkLUc"
 
-# รายชื่อหัวคอลัมน์ทั้ง 11 คอลัมน์ (แทรก "ชื่อ-นามสกุล" หลัง "กลุ่ม")
+# รายชื่อหัวคอลัมน์ทั้ง 11 คอลัมน์
 COLUMNS = [
     "ฝ่าย",
     "แผนก",
@@ -92,7 +92,6 @@ st.divider()
 # ---------------------------------------------------------
 @st.dialog("➕ บันทึก / แก้ไขข้อมูลผลกระทบน้ำท่วม")
 def show_survey_modal():
-    # 1. ปรับช่องกรอกข้อมูลส่วนบนให้มี ฝ่าย, แผนก, กลุ่ม, ชื่อ-นามสกุล
     col_d1, col_d2 = st.columns(2)
     with col_d1:
         faction = st.text_input("ฝ่าย *", placeholder="เช่น ฝ่ายผลิต")
@@ -135,7 +134,6 @@ def show_survey_modal():
                         sh = gc.open_by_key(SHEET_ID)
                         worksheet = sh.get_worksheet(0)
                         
-                        # 2. ปรับ new_row ให้มีครบทั้ง 11 คอลัมน์ตรงกับตัวแปร COLUMNS
                         new_row = [
                             faction.strip(),
                             dept.strip(),
@@ -197,18 +195,21 @@ if not df_data.empty:
     df_by_faction["แผนก"] = "รวมตามฝ่าย"
     df_by_faction["กลุ่ม"] = "-"
     df_by_faction["ชื่อ-นามสกุล"] = "-"
-    
-    # Reorder คอลัมน์ให้อยู่ในลำดับเดียวกับ COLUMNS
     df_by_faction = df_by_faction[COLUMNS]
 
-    # 2. สร้างบรรทัดสรุปรวมทั้งหมดองค์กร (Grand Total)
-    total_row = {"ฝ่าย": "รวมทั้งหมด (Total)", "แผนก": "-", "กลุ่ม": "-", "ชื่อ-นามสกุล": "-"}
+    # 2. สร้างบรรทัดสรุปรวมทั้งหมดองค์กร (Grand Total ทุก Column)
+    total_row = {
+        "ฝ่าย": "รวมทั้งหมด (Total)", 
+        "แผนก": "-", 
+        "กลุ่ม": "-", 
+        "ชื่อ-นามสกุล": "-"
+    }
     for col in num_cols:
         total_row[col] = df_data[col].sum()
     
-    df_grand_total = pd.DataFrame([total_row])
+    df_grand_total = pd.DataFrame([total_row])[COLUMNS]
     
-    # 3. รวมตารางสรุปรายฝ่าย และ สรุปรวมทั้งหมด เข้าด้วยกัน
+    # 3. รวมตารางสรุปรายฝ่าย และ สรุปรวมทั้งหมด (Grand Total) เข้าด้วยกัน
     df_total_summary = pd.concat([df_by_faction, df_grand_total], ignore_index=True)
     
     # แสดงตารางยอดรวมภาพรวมองค์กร
