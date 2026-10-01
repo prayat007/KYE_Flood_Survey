@@ -88,7 +88,7 @@ st.subheader("⏱️ (ส่งภายใน 12.00 น. วันที่ 30.
 st.divider()
 
 # ---------------------------------------------------------
-# 💡 POP-UP MODAL บันทึกข้อมูล
+# 💡 POP-UP MODAL บันทึกข้อมูล (ปรับเป็น ใช่ / ไม่ใช่)
 # ---------------------------------------------------------
 @st.dialog("➕ บันทึก / แก้ไขข้อมูลผลกระทบน้ำท่วม")
 def show_survey_modal():
@@ -100,27 +100,33 @@ def show_survey_modal():
         dept = st.text_input("แผนก *", placeholder="เช่น HR, IT")
         full_name = st.text_input("ชื่อ-นามสกุล", placeholder="เช่น นายสมชาย ใจดี")
 
+    options = ["ไม่ใช่", "ใช่"]
+
     st.markdown("---")
     st.markdown("### 1️⃣ สรุปการได้รับผลกระทบ")
-    no_impact = st.number_input("ไม่ได้รับผลกระทบ (คน)", min_value=0, value=0, step=1)
+    no_impact = st.radio("ไม่ได้รับผลกระทบ", options, index=0, horizontal=True)
     
     col_i1, col_i2, col_i3 = st.columns(3)
     with col_i1:
-        injured = st.number_input("ได้รับผลกระทบ: บาดเจ็บ", min_value=0, value=0, step=1)
+        injured = st.radio("ได้รับผลกระทบ: บาดเจ็บ", options, index=0, horizontal=True)
     with col_i2:
-        house_impact = st.number_input("ได้รับผลกระทบ: บ้าน", min_value=0, value=0, step=1)
+        house_impact = st.radio("ได้รับผลกระทบ: บ้าน", options, index=0, horizontal=True)
     with col_i3:
-        asset_impact = st.number_input("ได้รับผลกระทบ: ทรัพย์สิน", min_value=0, value=0, step=1)
+        asset_impact = st.radio("ได้รับผลกระทบ: ทรัพย์สิน", options, index=0, horizontal=True)
 
     st.markdown("---")
     st.markdown("### 2️⃣ สถานะการมาทำงาน")
-    can_work = st.number_input("มาทำงานได้ (คน)", min_value=0, value=0, step=1)
+    can_work = st.radio("มาทำงานได้", options, index=0, horizontal=True)
     
     col_w1, col_w2 = st.columns(2)
     with col_w1:
-        cant_work_house = st.number_input("มาทำงานไม่ได้: น้ำท่วมบ้านมาไม่ได้", min_value=0, value=0, step=1)
+        cant_work_house = st.radio("มาทำงานไม่ได้: น้ำท่วมบ้านมาไม่ได้", options, index=0, horizontal=True)
     with col_w2:
-        cant_work_road = st.number_input("มาทำงานไม่ได้: น้ำท่วมถนน/พื้นที่โดยรอบมาไม่ได้", min_value=0, value=0, step=1)
+        cant_work_road = st.radio("มาทำงานไม่ได้: น้ำท่วมถนน/พื้นที่โดยรอบมาไม่ได้", options, index=0, horizontal=True)
+
+    # ฟังก์ชันช่วยแปลงคำตอบ "ใช่" เป็น 1 และ "ไม่ใช่" เป็น 0
+    def to_num(val):
+        return "1" if val == "ใช่" else "0"
 
     col_save, col_close = st.columns([1, 1])
     with col_save:
@@ -134,18 +140,19 @@ def show_survey_modal():
                         sh = gc.open_by_key(SHEET_ID)
                         worksheet = sh.get_worksheet(0)
                         
+                        # แปลงค่าจาก "ใช่/ไม่ใช่" เป็น "1/0" ก่อนบันทึก
                         new_row = [
                             faction.strip(),
                             dept.strip(),
                             group_name.strip(),
                             full_name.strip(),
-                            str(no_impact),
-                            str(injured),
-                            str(house_impact),
-                            str(asset_impact),
-                            str(can_work),
-                            str(cant_work_house),
-                            str(cant_work_road)
+                            to_num(no_impact),
+                            to_num(injured),
+                            to_num(house_impact),
+                            to_num(asset_impact),
+                            to_num(can_work),
+                            to_num(cant_work_house),
+                            to_num(cant_work_road)
                         ]
                         
                         worksheet.append_row(new_row)
@@ -180,7 +187,7 @@ df_data = fetch_data()
 if not df_data.empty:
     num_cols = [c for c in COLUMNS if c not in TEXT_COLUMNS]
     
-    # แปลงคอลัมน์ตัวเลขให้เป็น int
+    # แปลงคอลัมน์ตัวเลขให้เป็น int (รองรับทั้งตัวเลขสถิติเดิมและค่า 1/0)
     for col in num_cols:
         df_data[col] = pd.to_numeric(df_data[col], errors='coerce').fillna(0).astype(int)
 
