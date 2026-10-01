@@ -19,16 +19,17 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ---------------------------------------------------------
 SHEET_ID = "1-9SAunNI81-u0I1zqULEa6JbFlWQjmJQ-HoAN4HkLUc"
 
-# รายชื่อหัวคอลัมน์ทั้ง 11 คอลัมน์
+# รายชื่อหัวคอลัมน์ใหม่ (รวม 12 คอลัมน์)
 COLUMNS = [
     "ฝ่าย",
     "แผนก",
     "กลุ่ม",
     "ชื่อ-นามสกุล",
-    "ไม่ได้รับผลกระทบ",
-    "ได้รับผลกระทบ: บาดเจ็บ",
-    "ได้รับผลกระทบ: บ้าน",
-    "ได้รับผลกระทบ: ทรัพย์สิน",
+    "ได้รับผลกระทบจากน้ำท่วม: กระทบ",
+    "ได้รับผลกระทบจากน้ำท่วม: ไม่กระทบ",
+    "ผลกระทบย่อย: บ้านน้ำท่วม",
+    "ผลกระทบย่อย: น้ำท่วมโดยรอบ",
+    "ผลกระทบย่อย: ได้รับอุบัติเหตุ",
     "มาทำงานได้",
     "มาทำงานไม่ได้: น้ำท่วมบ้านมาไม่ได้",
     "มาทำงานไม่ได้: น้ำท่วมถนน พื้นที่โดยรอบมาไม่ได้"
@@ -61,9 +62,9 @@ def fetch_data():
         worksheet = sh.get_worksheet(0)
         values = worksheet.get_all_values()
         
-        # ปรับแก้หัวตารางให้ตรงกันอัตโนมัติ (A1 ถึง K1 รวม 11 คอลัมน์)
+        # ปรับแก้หัวตารางให้ตรงกันอัตโนมัติ (A1 ถึง L1 รวม 12 คอลัมน์)
         if len(values) == 0 or values[0] != COLUMNS:
-            worksheet.update(range_name='A1:K1', values=[COLUMNS])
+            worksheet.update(range_name='A1:L1', values=[COLUMNS])
             values = worksheet.get_all_values()
 
         if len(values) > 1:
@@ -88,47 +89,51 @@ st.subheader("⏱️ (ส่งภายใน 12.00 น. วันที่ 30.
 st.divider()
 
 # ---------------------------------------------------------
-# 💡 POP-UP MODAL บันทึกข้อมูล (Drop-down List)
+# 💡 POP-UP MODAL บันทึกข้อมูล
 # ---------------------------------------------------------
 @st.dialog("➕ บันทึก / แก้ไขข้อมูลผลกระทบน้ำท่วม")
 def show_survey_modal():
     col_d1, col_d2 = st.columns(2)
     with col_d1:
-        # Drop-down List สำหรับ ฝ่าย และ กลุ่ม
         faction = st.selectbox("ฝ่าย *", ["QA"])
         group_name = st.selectbox("กลุ่ม", ["G.71", "G.72", "-"])
     with col_d2:
-        # Drop-down List สำหรับ แผนก
         dept = st.selectbox("แผนก *", ["QEC", "CSV"])
         full_name = st.text_input("ชื่อ-นามสกุล *", placeholder="เช่น นายสมชาย ใจดี")
 
-    options = ["ไม่ใช่", "ใช่"]
-
     st.markdown("---")
     st.markdown("### 1️⃣ สรุปการได้รับผลกระทบ")
-    no_impact = st.radio("ไม่ได้รับผลกระทบ", options, index=0, horizontal=True)
     
-    col_i1, col_i2, col_i3 = st.columns(3)
-    with col_i1:
-        injured = st.radio("ได้รับผลกระทบ: บาดเจ็บ", options, index=0, horizontal=True)
-    with col_i2:
-        house_impact = st.radio("ได้รับผลกระทบ: บ้าน", options, index=0, horizontal=True)
-    with col_i3:
-        asset_impact = st.radio("ได้รับผลกระทบ: ทรัพย์สิน", options, index=0, horizontal=True)
+    # คำถามหลัก: ได้รับผลกระทบจากน้ำท่วมหรือไม่
+    impact_status = st.radio(
+        "ได้รับผลกระทบจากน้ำท่วมหรือไม่ *",
+        ["ไม่กระทบ", "กระทบ"],
+        index=0,
+        horizontal=True
+    )
+    
+    # ตัวแปรเก็บค่าเมนูย่อย
+    sub_house = False
+    sub_surround = False
+    sub_accident = False
+
+    # ถ้าตอบ "กระทบ" ให้แสดงเมนูย่อยให้เลือกตอบเพิ่มเติม
+    if impact_status == "กระทบ":
+        st.info("💡 กรุณาเลือกรายละเอียดผลกระทบที่ได้รับ (เลือกตอบได้มากกว่า 1 ข้อ):")
+        sub_house = st.checkbox("🏠 บ้านน้ำท่วม")
+        sub_surround = st.checkbox("🌊 น้ำท่วมโดยรอบ")
+        sub_accident = st.checkbox("🚑 ได้รับอุบัติเหตุ")
 
     st.markdown("---")
     st.markdown("### 2️⃣ สถานะการมาทำงาน")
-    can_work = st.radio("มาทำงานได้", options, index=0, horizontal=True)
+    can_work_option = st.radio("สถานะการมาทำงาน", ["มาทำงานได้", "มาทำงานไม่ได้"], index=0, horizontal=True)
     
-    col_w1, col_w2 = st.columns(2)
-    with col_w1:
-        cant_work_house = st.radio("มาทำงานไม่ได้: น้ำท่วมบ้านมาไม่ได้", options, index=0, horizontal=True)
-    with col_w2:
-        cant_work_road = st.radio("มาทำงานไม่ได้: น้ำท่วมถนน/พื้นที่โดยรอบมาไม่ได้", options, index=0, horizontal=True)
-
-    # ฟังก์ชันแปลงคำตอบ "ใช่" เป็น 1 และ "ไม่ใช่" เป็น 0
-    def to_num(val):
-        return "1" if val == "ใช่" else "0"
+    cant_work_house = False
+    cant_work_road = False
+    if can_work_option == "มาทำงานไม่ได้":
+        st.info("💡 กรุณาระบุสาเหตุที่มาทำงานไม่ได้:")
+        cant_work_house = st.checkbox("น้ำท่วมบ้านมาไม่ได้")
+        cant_work_road = st.checkbox("น้ำท่วมถนน/พื้นที่โดยรอบมาไม่ได้")
 
     col_save, col_close = st.columns([1, 1])
     with col_save:
@@ -142,18 +147,31 @@ def show_survey_modal():
                         sh = gc.open_by_key(SHEET_ID)
                         worksheet = sh.get_worksheet(0)
                         
+                        # คำนวณค่า 1 และ 0 ตามการเลือก
+                        affected_val = "1" if impact_status == "กระทบ" else "0"
+                        not_affected_val = "1" if impact_status == "ไม่กระทบ" else "0"
+                        
+                        sub_house_val = "1" if sub_house else "0"
+                        sub_surround_val = "1" if sub_surround else "0"
+                        sub_accident_val = "1" if sub_accident else "0"
+                        
+                        can_work_val = "1" if can_work_option == "มาทำงานได้" else "0"
+                        cant_house_val = "1" if cant_work_house else "0"
+                        cant_road_val = "1" if cant_work_road else "0"
+
                         new_row = [
                             faction,
                             dept,
                             group_name,
                             full_name.strip(),
-                            to_num(no_impact),
-                            to_num(injured),
-                            to_num(house_impact),
-                            to_num(asset_impact),
-                            to_num(can_work),
-                            to_num(cant_work_house),
-                            to_num(cant_work_road)
+                            affected_val,
+                            not_affected_val,
+                            sub_house_val,
+                            sub_surround_val,
+                            sub_accident_val,
+                            can_work_val,
+                            cant_house_val,
+                            cant_road_val
                         ]
                         
                         worksheet.append_row(new_row)
