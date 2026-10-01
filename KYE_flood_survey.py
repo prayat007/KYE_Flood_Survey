@@ -83,22 +83,24 @@ def fetch_data():
 st.set_page_config(page_title="แบบสำรวจผลกระทบน้ำท่วม", page_icon="🌊", layout="wide")
 
 st.title("🌊 แบบสำรวจผลกระทบน้ำท่วม")
-st.subheader("⏱️ (ส่งภายใน 12.00 น. วันที่ 02.10.2026)")
+st.subheader("⏱️ (ส่งภายใน 12.00 น. วันที่ 30.09.2026)")
 
 st.divider()
 
 # ---------------------------------------------------------
-# 💡 POP-UP MODAL บันทึกข้อมูล (ปรับเป็น ใช่ / ไม่ใช่)
+# 💡 POP-UP MODAL บันทึกข้อมูล (Drop-down List)
 # ---------------------------------------------------------
 @st.dialog("➕ บันทึก / แก้ไขข้อมูลผลกระทบน้ำท่วม")
 def show_survey_modal():
     col_d1, col_d2 = st.columns(2)
     with col_d1:
-        faction = st.text_input("ฝ่าย *", placeholder="เช่น ฝ่ายผลิต")
-        group_name = st.text_input("กลุ่ม", placeholder="เช่น กลุ่มงาน A")
+        # Drop-down List สำหรับ ฝ่าย และ กลุ่ม
+        faction = st.selectbox("ฝ่าย *", ["QA"])
+        group_name = st.selectbox("กลุ่ม", ["G.71", "G.72", "-"])
     with col_d2:
-        dept = st.text_input("แผนก *", placeholder="เช่น HR, IT")
-        full_name = st.text_input("ชื่อ-นามสกุล", placeholder="เช่น นายสมชาย ใจดี")
+        # Drop-down List สำหรับ แผนก
+        dept = st.selectbox("แผนก *", ["QEC", "CSV"])
+        full_name = st.text_input("ชื่อ-นามสกุล *", placeholder="เช่น นายสมชาย ใจดี")
 
     options = ["ไม่ใช่", "ใช่"]
 
@@ -124,15 +126,15 @@ def show_survey_modal():
     with col_w2:
         cant_work_road = st.radio("มาทำงานไม่ได้: น้ำท่วมถนน/พื้นที่โดยรอบมาไม่ได้", options, index=0, horizontal=True)
 
-    # ฟังก์ชันช่วยแปลงคำตอบ "ใช่" เป็น 1 และ "ไม่ใช่" เป็น 0
+    # ฟังก์ชันแปลงคำตอบ "ใช่" เป็น 1 และ "ไม่ใช่" เป็น 0
     def to_num(val):
         return "1" if val == "ใช่" else "0"
 
     col_save, col_close = st.columns([1, 1])
     with col_save:
         if st.button("💾 บันทึกข้อมูลลง Google Sheets", type="primary", use_container_width=True):
-            if not faction.strip() or not dept.strip():
-                st.warning("⚠️ กรุณากรอก 'ฝ่าย' และ 'แผนก'")
+            if not full_name.strip():
+                st.warning("⚠️ กรุณากรอก 'ชื่อ-นามสกุล'")
             else:
                 try:
                     gc = get_gspread_client()
@@ -140,11 +142,10 @@ def show_survey_modal():
                         sh = gc.open_by_key(SHEET_ID)
                         worksheet = sh.get_worksheet(0)
                         
-                        # แปลงค่าจาก "ใช่/ไม่ใช่" เป็น "1/0" ก่อนบันทึก
                         new_row = [
-                            faction.strip(),
-                            dept.strip(),
-                            group_name.strip(),
+                            faction,
+                            dept,
+                            group_name,
                             full_name.strip(),
                             to_num(no_impact),
                             to_num(injured),
@@ -187,7 +188,7 @@ df_data = fetch_data()
 if not df_data.empty:
     num_cols = [c for c in COLUMNS if c not in TEXT_COLUMNS]
     
-    # แปลงคอลัมน์ตัวเลขให้เป็น int (รองรับทั้งตัวเลขสถิติเดิมและค่า 1/0)
+    # แปลงคอลัมน์ตัวเลขให้เป็น int
     for col in num_cols:
         df_data[col] = pd.to_numeric(df_data[col], errors='coerce').fillna(0).astype(int)
 
